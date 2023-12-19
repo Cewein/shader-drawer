@@ -3,21 +3,26 @@
 // This is a 2D star field, this use a probabilistic quad tree [1]
 // to make the star, the version it was based on was nice but still very
 // bloated, therefore was cleaned here. Use fractal brownian motion [2] from
-// perlin noise [3] to generate the "space dust". 
+// perlin noise [3] to generate the "space dust". star brigthness is a poor's man
+// black body radiation approximation [4][5]
 //
 //
 // Possible improvement :
 // 		- Anti-Aliasing (but heave on perf)
 //		- in the quadtree perform neighbour check
+//      - better control of the star size, color, brigthness and blinking periode
+//      - better control for the gaz clouds
 //
 // sources : 
 // [1]: https://ciphrd.com/2020/04/02/building-a-quadtree-filter-in-glsl-using-a-probabilistic-approach/
 // [2]: https://www.esaim-proc.org/articles/proc/pdf/1998/03/proc-Vol5.7.pdf
 // [3]: https://mrl.cs.nyu.edu/~perlin/paper445.pdf
+// [4]: https://www.atnf.csiro.au/outreach//education/senior/cosmicengine/stars_colour.html
+// [5]: https://en.wikipedia.org/wiki/Planck%27s_law
 
 // Constants for quadtree division and iteration counts
-#define MIN_DIVISIONS 8.0
-#define MAX_ITERATIONS 3
+#define MIN_DIVISIONS 10.0
+#define MAX_ITERATIONS 4
 #define SAMPLES_PER_ITERATION 5
 
 // Function to calculate color variation for a quad division in space
@@ -92,11 +97,17 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     vec4 color = vec4(d);
 
     // Perform blinking effect between two colors
+    // and fake black body radiation
+    // the blinking is slow and just for a pure "artistic" vision
+    // and the brigthness as a poorman's version of the Planck's law
     float blinkFactor = clamp(sin(100.0 * cos(randNum) + .50 * iTime * randNum),0.,1.0);
-    vec4 startColor = vec4(0.70, 0.27, 0.0, 1.0);
-    vec4 endColor = vec4(0.859, 0.914, 0.957, 1.0);
-    vec4 blendedColor = mix(startColor, endColor,randNum);
-    color *= blinkFactor * blendedColor; 
+    float brigthness = smoothstep(0.1, 1.0, randNum * 0.7 + 0.3);
+    
+    //brigth star are "white blue" and dim stars are "fire orange"
+    vec4 brightColor = vec4(0.859, 0.914, 0.957,1.0); // White-blue color
+    vec4 dimColor = vec4(0.70, 0.27, 0.0,1.0); // Fire orange color
+    vec4 blendedColor = mix(dimColor, brightColor,randNum);
+    color *= brigthness * blinkFactor * blendedColor; 
     
     // Apply ellipses with different parameters and update color each time
     color = applyEllipse(uv, a, b, vec2(2.2, 0.5), vec2(0.25, 0.75), vec3(2.0, 0.9, 0.7), color, 0.75, vec4(1.0, 0.4, 0.6, 1.0));
